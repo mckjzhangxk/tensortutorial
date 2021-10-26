@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <title>_iris_classifier.html</title>
+</head>
+
+<body>
+
+</body>
+<script lang="js">
+
+    function loadData() {
+        //dataset
+        const csvUrl = '/data/iris.csv';
+        const cvsdataset = tf.data.csv(csvUrl, {
+            columnConfigs: {
+                species: {
+                    isLabel: true
+                }
+            }
+        });
+
+
+        //cvsdataset的格式={xs:{},ys:{}}。 把字典转换成数字
+       
+        const convertedData =cvsdataset.map(({ xs, ys }) => {
+            
+            let features = Object.values(xs);   //xs={sepal_length:[],sepal_width:[],....}
+            //ys={ys_new:[]}
+            let labels = [
+                ys.species == "setosa" ? 1 : 0,
+                ys.species == "virginica" ? 1 : 0,
+                ys.species == "versicolor" ? 1 : 0
+            ]
+
+            return {
+                xs: features,
+                ys: labels
+            }
+        }).batch(10);
+
+         return convertedData
+    }
+
+    function createModel(numOfFeatures) {
+        let model = tf.sequential();
+
+        model.add(tf.layers.dense({
+            inputShape: [numOfFeatures],
+            units: 5,
+            activation: 'relu'
+        }));
+
+
+        model.add(tf.layers.dense({
+            units: 3,
+            activation: 'softmax'
+        }));
+
+        model.compile({
+            loss: 'categoricalCrossentropy',
+            optimizer:tf.train.adam(0.06)
+        });
+
+        model.summary()
+        return model;
+    }
+
+
+    async function doTraining(model, ds) {
+
+        const history = model.fitDataset(ds, {
+            epochs: 500,
+            callbacks: {
+                onEpochEnd: async (epoch, logs) => {
+                    console.log(`Epoch ${epoch}:Loss ${logs.loss}`)
+                }
+            }
+        });
+
+        return history;
+    }
+    let batchDataSet = loadData();
+    let model = createModel(4);
+
+
+    doTraining(model, batchDataSet).then((history) => {
+        let result=model.predict(tf.tensor2d([5.4,3.9,1.7,0.4],[1,4]));
+        result.print()
+    });
+</script>
+
+</html>
