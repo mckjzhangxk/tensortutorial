@@ -1,0 +1,3 @@
+tensorjs/cnn/data/fashion_mnist_labels_uint8
+tensorjs/cnn/data/fashion_mnist_images.png
+cats_and_dogs_filtered.zip
