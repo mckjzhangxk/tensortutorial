@@ -7,7 +7,6 @@
     <title>Document</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
-    <script src="utils/data.js" type="module"></script>
 </head>
 <body>
     
@@ -65,7 +64,8 @@
 
         let TRAIN_DATA_SIZE=55000;
         let [trainXs,trainYs]=tf.tidy(()=>{
-            let trainSet=dataSource.nextTrainBatch(TRAIN_DATA_SIZE)
+            //trainSet:{xs:tensor,labels:tensor}
+            let trainSet=dataSource.nextTrainBatch(TRAIN_DATA_SIZE);
             let xs=tf.reshape(trainSet.xs,[TRAIN_DATA_SIZE,28,28,1]);
             let ys=trainSet.labels;
             return [xs,ys]

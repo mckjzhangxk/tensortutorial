@@ -43,57 +43,74 @@ export class MnistData {
 
   async load() {
     // Make a request for the MNIST sprited image.
+    //document.createElement("img");
     const img = new Image();
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const imgRequest = new Promise((resolve, reject) => {
       img.crossOrigin = '';
+      //下载图片完成一会会被触发
       img.onload = () => {
         img.width = img.naturalWidth;
         img.height = img.naturalHeight;
 
+        //最终raw数据的 byte表示
         const datasetBytesBuffer =
             new ArrayBuffer(NUM_DATASET_ELEMENTS * IMAGE_SIZE * 4);
 
         const chunkSize = 5000;
         canvas.width = img.width;
         canvas.height = chunkSize;
-
+         //每次处理chunkSize
+         //把image的部分 化到 canvas上，然后调用canvas.content.getImageData,
+        //并且把它 复制给datasetByteBuffer
         for (let i = 0; i < NUM_DATASET_ELEMENTS / chunkSize; i++) {
+          //每次取出 chunkSize张 image,组成一张（IMAGESIZE,chunkSize）的图
           const datasetBytesView = new Float32Array(
               datasetBytesBuffer, i * IMAGE_SIZE * chunkSize * 4,
               IMAGE_SIZE * chunkSize);
+          //源 img, 区域 (x=0,y=i*chunkSize,width=width,height=chunkSize)
+          //目标 cxt,区域(x=0,y=0,width,chunkSize)
           ctx.drawImage(
               img, 0, i * chunkSize, img.width, chunkSize, 0, 0, img.width,
               chunkSize);
-
+          //imageData.data.length=W*H*4,4=RGBA,这里由于是grayscale,所以 自动填充G,B,A通道
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-          for (let j = 0; j < imageData.data.length / 4; j++) {
+          //scale every pixel valut to 0,1
+          for (let j = 0; j < datasetBytesView.length; j++) {
             // All channels hold an equal value since the image is grayscale, so
             // just read the red channel.
             datasetBytesView[j] = imageData.data[j * 4] / 255;
           }
         }
+        //最终的raw数据
         this.datasetImages = new Float32Array(datasetBytesBuffer);
 
         resolve();
       };
+      //下载并且加载sprite width=28*28,height=65000
       img.src = MNIST_IMAGES_SPRITE_PATH;
     });
 
     const labelsRequest = fetch(MNIST_LABELS_PATH);
     const [imgResponse, labelsResponse] =
         await Promise.all([imgRequest, labelsRequest]);
-
-    this.datasetLabels = new Uint8Array(await labelsResponse.arrayBuffer());
+    //arrayBuffer的单位是字节，这里返回65000*10个字节
+    let buffer=await labelsResponse.arrayBuffer();
+    //转成无符号  ,65000 sample's, with 65000*10 byte
+    this.datasetLabels = new Uint8Array(buffer);
 
     // Create shuffled indices into the train/test set for when we select a
     // random dataset element for training / validation.
+    //trainIndices:array
     this.trainIndices = tf.util.createShuffledIndices(NUM_TRAIN_ELEMENTS);
     this.testIndices = tf.util.createShuffledIndices(NUM_TEST_ELEMENTS);
 
     // Slice the the images and labels into train and test sets.
+    //return floatArray of trainset
+    //totol bytes=#trainset * 28 *28 *4
     this.trainImages =
         this.datasetImages.slice(0, IMAGE_SIZE * NUM_TRAIN_ELEMENTS);
     this.testImages = this.datasetImages.slice(IMAGE_SIZE * NUM_TRAIN_ELEMENTS);
